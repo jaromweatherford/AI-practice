@@ -3,6 +3,7 @@ from sklearn.model_selection import train_test_split
 from sklearn.naive_bayes import GaussianNB
 from HardCodedClassifier import HardCodedClassifier
 from KNNClassifier import KNNClassifier
+from KNNClassifier import test_classifier
 import numpy
 
 iris = datasets.load_iris()
@@ -138,33 +139,25 @@ for x in xrange(len(skPredicted)):
 print ("Accuracy of sklearn's KNN program:" + str((len(test_target) - wrong) / float(len(test_target))))
 
 
-def test_classifier(data_set, k):
-    training_data, testing_data, training_target, testing_target = train_test_split(data_set.data, data_set.target, test_size=0.3)
-    cla = KNNClassifier(k)
-    mod = cla.fit(training_data, training_target)
-    prediction = mod.predict(testing_data)
-
-    num_wrong = 0
-
-    for x in xrange(len(prediction)):
-        if int(prediction[x]) != int(testing_target[x]):
-            num_wrong += 1
-
-    return (len(prediction) - num_wrong) / float(len(prediction))
-
-
-print("Accuracy of my KNN program on the iris data set: " + str(test_classifier(iris, 3)))
+print("Accuracy of my KNN program on the iris data set: " + str(test_classifier(iris.data, iris.target, 3)))
 
 # This one usually produces about 10% accuracy, it probably needs to be scaled.
-print("Accuracy of my KNN program on the boston data set: " + str(test_classifier(datasets.load_boston(), 3)))
+boston = datasets.load_boston()
+print("Accuracy of my KNN program on the boston data set: " + str(test_classifier(boston.data, boston.target, 3)))
 
-print("Accuracy of my KNN program on the breast cancer data set: " + str(test_classifier(datasets.load_breast_cancer(), 3)))
+cancer = datasets.load_breast_cancer()
+print("Accuracy of my KNN program on the breast cancer data set: " + str(test_classifier(cancer.data, cancer.target, 3)))
 
 # This one always gets nearly 0 accuracy.  Maybe it's regressive?  Or it needs scaling.
-print("Accuracy of my KNN program on the diabetes data set: " + str(test_classifier(datasets.load_diabetes(), 3)))
+diabetes = datasets.load_diabetes()
+#print diabetes
+print("Accuracy of my KNN program on the diabetes data set: " + str(test_classifier(diabetes.data, diabetes.target, 3)))
 
 # this data set seems to be more complex than the others, it causes an error that suggests
 # unexpected dimensionality in the arrays
 #print("Accuracy of my KNN program on the linnerud data set: " + str(test_classifier(datasets.load_linnerud(), 3)))
 
-print("Accuracy of my KNN program on the wine data set: " + str(test_classifier(datasets.load_wine(), 3)))
+wine = datasets.load_wine()
+print("Accuracy of my KNN program on the wine data set: " + str(test_classifier(wine.data, wine.target, 3)))
+
+
