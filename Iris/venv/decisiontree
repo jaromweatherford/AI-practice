@@ -1,0 +1,170 @@
+import pandas
+import numpy
+import math
+from sklearn import datasets
+from sklearn import tree
+from sklearn.model_selection import train_test_split
+from tree import Tree
+
+class DecisionTreeClassifier:
+    def __init__(self):
+        pass
+
+    def fit(self, data, targets):
+        return DecisionTreeModel(data, targets)
+
+
+class DecisionTreeModel:
+
+    def __init__(self, data, targets):
+        self.tree = build_tree(data, targets)
+
+    def predict(self, data, default_choice="Decision Tree Default"):
+        results = range(len(data))
+        for itest in xrange(len(data)):
+            decision = self.tree
+            while len(decision.children) > 0:
+                if data[decision.data][itest] in decision.children.keys():
+                    decision = decision.children[data[decision.data][itest]]
+                else:
+                    decision = decision.children[default_choice]
+            results[itest] = decision.data
+        return results
+
+
+def main():
+    data = pandas.DataFrame({"Type": ["Comedy", "Comedy", "Drama", "Drama", "Comedy", "Comedy", "Drama"],
+                             "Plot": ["Deep", "Shallow", "Deep", "Shallow", "Deep", "Shallow", "Deep"],
+                             "Star Actors": ["Yes", "Yes", "Yes", "No", "No", "No", "No"],
+                             "Profit": ["Low", "High", "High", "Low", "High", "High", "Low"]})
+    iris = datasets.load_iris()
+    data = pandas.DataFrame(iris.data, columns=['0', '1', '2', '3'])
+    targets = iris.target
+    for x in xrange(len(targets)):
+        if data['0'][x] < 5.5:
+            data['0'][x] = 0
+        elif data['0'][x] < 7:
+            data['0'][x] = 1
+        else:
+            data['0'][x] = 2
+        if data['1'][x] < 3:
+            data['1'][x] = 2
+        elif data['1'][x] < 4:
+            data['1'][x] = 3
+        else:
+            data['1'][x] = 4
+        if data['2'][x] < 3:
+            data['2'][x] = 0
+        elif data['2'][x] < 5:
+            data['2'][x] = 1
+        else:
+            data['2'][x] = 2
+        if data['3'][x] < 1:
+            data['3'][x] = 0
+        elif data['3'][x] < 2:
+            data['3'][x] = 1
+        else:
+            data['3'][x] = 2
+    #print data[data['0'] == 0]
+    #print data.as_matrix()
+    #print calc_entropy(data["Profit"])
+    #for x in set(data["Plot"]):
+    #    print x, numpy.count_nonzero(data["Plot"] == x)
+    #print max(set(data["Star Actors"]), key=lambda p: numpy.count_nonzero(data["Star Actors"] == p))
+    #print numpy.rot90(data[["Type", "Plot", "Star Actors"]])
+    #print build_tree(data.drop(columns=["Type", "Plot", "Star Actors", "Profit"]), [0, 0, 0, 0, 0, 0, 0]).data
+    train_data, test_data, train_target, test_target = train_test_split(data, targets, test_size=0.3)
+    train_data.reset_index(inplace=True, drop=True)
+    test_data.reset_index(inplace=True, drop=True)
+
+    classifier = tree.DecisionTreeClassifier()
+    model = classifier.fit(train_data.as_matrix(), train_target)
+    predicted = model.predict(test_data)
+    wrong = 0
+    for x in xrange(len(predicted)):
+        if predicted[x] != test_target[x]:
+            wrong = wrong + 1
+    print("accuracy")
+    print((len(test_target) - wrong) / float(len(test_target)))
+
+    classifier = DecisionTreeClassifier()
+    model = classifier.fit(train_data, train_target)
+    new_predicted = model.predict(test_data)
+    new_wrong = 0
+    for x in xrange(len(new_predicted)):
+        if new_predicted[x] != test_target[x]:
+            new_wrong = new_wrong + 1
+    print("accuracy")
+    print((len(test_target) - new_wrong) / float(len(test_target)))
+
+
+
+def build_tree(data, targets, default_choice="Decision Tree Default"):
+    #print "building tree..."
+    #print "data: "
+    #print data
+    if len(set(targets)) == 1:
+        #print "Making a leaf out of the only available option..."
+        return Tree(targets[0])
+    variety = False
+    for col in data.columns:
+        if len(set(data[col])) > 1:
+            variety = True
+    if not variety:
+        #print "Making a leaf out of the mode of available options..."
+        return Tree(max(set(targets), key=lambda p: numpy.count_nonzero(targets == p)))
+    #print "Building a decision tree recursively..."
+    decision = Tree(min(data.columns, key=lambda p: sum_entropy(data[p], targets)))
+    #new_data = pandas.DataFrame(data.drop(columns=decision.data))
+    #print "decision: ", decision.data
+    for option in set(data[decision.data]):
+        #print
+        #print "option: ", option
+        select_targets = []
+        for x in xrange(len(targets)):
+            if data[decision.data][x] == option:
+                select_targets = numpy.append(select_targets, targets[x])
+        new_data = data[data[decision.data] == option].reset_index(drop=True)
+        #print new_data
+        del new_data[decision.data]
+        decision.children.update({option: build_tree(new_data, select_targets)})
+    new_data = data
+    del new_data[decision.data]
+    decision.children.update({default_choice: build_tree(new_data, targets)})
+    return decision
+
+
+def sum_entropy(data_column, targets):
+    #print "summing entropy..."
+    sum = 0
+    for val in set(data_column):
+        select_targets = []
+        for x in xrange(len(targets)):
+            if data_column[x] == val:
+                select_targets = numpy.append(select_targets, [targets[x]])
+        sum += calc_entropy(select_targets) * len(select_targets)
+        #print "sum = ", sum
+    return sum
+
+
+def calc_entropy(data):
+    ratios = calc_ratios(data)
+    entropy = 0
+    for key in ratios:
+        entropy -= (ratios[key] * math.log(ratios[key], 2))
+    return entropy
+
+def calc_ratios(data):
+    ratios = {}
+    for x in data:
+        if x in ratios.keys():
+            ratios[x] += 1
+        else:
+            ratios.update({x: 1})
+    for key in ratios:
+        ratios[key] = ratios[key] / float(len(data))
+    return ratios
+
+
+if __name__ == "__main__":
+    main()
