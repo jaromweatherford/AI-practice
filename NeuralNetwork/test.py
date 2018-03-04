@@ -2,6 +2,7 @@ from scipy import stats
 import pandas as pd
 import nnet
 import numpy as np
+from sklearn.model_selection import KFold
 from sklearn.model_selection import train_test_split
 from sklearn import datasets
 """
@@ -19,29 +20,65 @@ print list
 """Getting the data set"""
 iris = datasets.load_iris()
 
+print
+print
+print
+print "LENGTH OF THE DATA SET: ", len(iris.data)
+print
+print
+print
+
+"""For calculating the total accuracy over all folds"""
+total_accuracy = 0.0
+
 """Split the data set"""
-train_data, test_data, pre_train_target, pre_test_target = train_test_split(iris.data, iris.target, test_size=0.3)
+kf = KFold(n_splits=len(iris.data))
+for train, test in kf.split(iris.data):
+    train_data, test_data, pre_train_target, pre_test_target = iris.data[train], iris.data[test], iris.target[train], iris.target[test]
 
-"""Prep the targets (convert from 0, 1, or 2 to 100, 010, or 001"""
-train_target = np.zeros((len(pre_train_target), 3), dtype=int)
-for x in xrange(len(pre_train_target)):
-    train_target[x][pre_train_target[x]] = 1
-test_target = np.zeros((len(pre_test_target), 3), dtype=int)
-for x in xrange(len(pre_test_target)):
-    test_target[x][pre_test_target[x]] = 1
+    """Prep the targets (convert from 0, 1, or 2 to 100, 010, or 001"""
+    train_target = np.zeros((len(pre_train_target), 3), dtype=int)
+    for x in xrange(len(pre_train_target)):
+        train_target[x][pre_train_target[x]] = 1
+    test_target = np.zeros((len(pre_test_target), 3), dtype=int)
+    for x in xrange(len(pre_test_target)):
+        test_target[x][pre_test_target[x]] = 1
 
-"""Normalize"""
-train_target = stats.zscore(train_target, axis=0)
-test_target = stats.zscore(test_target, axis=0)
+    """Normalize"""
+    train_target = stats.zscore(train_target, axis=0)
+    #test_target = stats.zscore(test_target, axis=0)
 
-"""Make the classifier and model"""
-classifier = nnet.NNetClassifier(3)
-model = classifier.fit(train_data, train_target)
+    """Make the classifier and model"""
+    classifier = nnet.NNetClassifier([3])
+    model = classifier.fit(train_data, train_target)
 
-"""Predict"""
-prediction = model.predict(test_data)
-print "NODES: "
-print prediction
+    """Predict"""
+    prediction = model.predict(test_data)
+
+    wrong = 0
+    for datum in xrange(len(prediction)):
+        bad_guess = False
+        #print test_target[datum], " - ", prediction[datum]
+        for value in xrange(len(prediction[datum])):
+            #print prediction[datum][value] < 0.5, " - ", test_target[datum][value] < 0.5, " - ", (prediction[datum][value] < 0.5) != (test_target[datum][value] < 0.5)
+            if (prediction[datum][value] < 0.5) != (test_target[datum][value] < 0.5):
+                bad_guess = True
+        if bad_guess:
+            wrong += 1
+
+    #print wrong, ", ", len(prediction)
+
+    accuracy = (len(prediction) - wrong) / float(len(prediction))
+    total_accuracy += accuracy
+    print "IRIS ACCURACY: ", accuracy
+
+print
+print
+print
+print "IRIS TOTAL ACCURACY: ", total_accuracy / float(len(iris.data))
+print
+print
+print
 
 """DIABETES"""
 
@@ -52,16 +89,30 @@ data = stats.zscore(d_set[["0", "1", "2", "3", "4", "5", "6", "7"]], axis=0)
 targets = d_set["8"].as_matrix()
 
 """Split the data set"""
-train_data, test_data, pre_train_target, pre_test_target = train_test_split(data, targets, test_size=0.3)
+train_data, test_data, train_target, test_target = train_test_split(data, targets, test_size=0.3)
+
+train_target = np.reshape(train_target, (len(train_target), 1))
+test_target = np.reshape(test_target, (len(test_target), 1))
 
 """Make the classifier and model"""
-classifier = nnet.NNetClassifier(1)
+classifier = nnet.NNetClassifier([3])
 model = classifier.fit(train_data, train_target)
 
 """Predict"""
 prediction = model.predict(test_data)
-print "NODES: "
-print prediction
+
+# print prediction
+
+wrong = 0
+for datum in xrange(len(prediction)):
+    bad_guess = False
+    for value in xrange(len(prediction[datum])):
+        if (prediction[datum][value] < 0.5) != (test_target[datum][value] < 0.5):
+            bad_guess = True
+    if bad_guess == True:
+        wrong += 1
+
+print "DIABETES ACCURACY: ", (len(prediction) - wrong) / float(len(prediction))
 
 #def run(url, header, categories=None, Nan="?", k=3):
 #    data = read(url, header)
@@ -83,3 +134,21 @@ print prediction
 #    return data
 
 #    data = pd.read_csv(url, names=header, skipinitialspace=True)
+
+"""
+ERROR/UPDATE FOR OUTPUT NODES
+error = outputactivation * (1 - outputactivation) * (outputactivation - outputtarget)
+newweight = oldweight - (learningrate * error * inputActivation
+
+ej = aj(1 - aj)(aj - tj)
+wij = wij - N * ej * ai
+
+ERROR FOR HIDDEN NODES
+
+ej = aj (1 - aj) sum wjk * ek
+wij = wij - N * ej * ai
+
+
+errors = np.array(self.nodes, copy=True)
+newWeights = np.array(self.weights, copy=True)
+"""
